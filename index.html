@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>AuditMed | Auditoría Res. 2706 de 2025</title>
+
+<!-- Librerías -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@7.1.0/build/index.js"></script>
+
+<style>
+  :root {
+    --primary-color: #0056b3;
+    --secondary-color: #28a745;
+    --bg-color: #f0f4f8;
+    --card-bg: #ffffff;
+    --text-color: #33475b;
+    --success-bg: #d4edda;
+    --success-text: #155724;
+    --danger-bg: #f8d7da;
+    --danger-text: #721c24;
+    --warning-bg: #fff3cd;
+    --warning-text: #856404;
+    --accent-medical: #eef7fb;
+  }
+
+  body {
+    font-family: 'Segoe UI', Roboto, sans-serif;
+    background-color: var(--bg-color);
+    margin: 0;
+    padding: 20px;
+    color: var(--text-color);
+  }
+
+  .container { max-width: 1200px; margin: 0 auto; }
+
+  .header {
+    background: white;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 25px;
+    border-bottom: 4px solid var(--primary-color);
+  }
+
+  .logo-container { display: flex; align-items: center; gap: 15px; }
+
+  .card {
+    background: var(--card-bg);
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    margin-bottom: 20px;
+  }
+
+  .file-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 40px;
+    margin-bottom: 25px;
+  }
+
+  .file-box { flex: 1; max-width: 450px; }
+  
+  .card-title {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 10px;
+    color: var(--primary-color);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+  }
+
+  input[type="file"] {
+    width: 100%;
+    padding: 10px;
+    background: var(--accent-medical);
+    border: 2px dashed #b1d4e5;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  input[type="file"]::file-selector-button {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 5px;
+    margin-right: 15px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+
+  .separator { width: 1px; height: 80px; background-color: #ddd; }
+
+  .actions { display: flex; justify-content: center; gap: 15px; padding-top: 15px; border-top: 1px solid #f0f0f0; }
+
+  .main-btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+  }
+
+  .btn-primary { background-color: var(--primary-color); color: white; }
+  .btn-success { background-color: #218838; color: white; }
+  .btn-word { background-color: #2b579a; color: white; }
+  .main-btn:hover { transform: translateY(-2px); opacity: 0.9; }
+
+  .stats-bar { display: flex; align-items: center; gap: 12px; margin-left: 20px; }
+
+  .stat-button {
+    border: 2px solid transparent;
+    padding: 8px 16px;
+    border-radius: 30px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center; gap: 6px;
+  }
+
+  .stat-total { background: #e9ecef; color: #495057; }
+  .stat-igual { background: var(--success-bg); color: var(--success-text); }
+  .stat-dif { background: var(--danger-bg); color: var(--danger-text); }
+  .stat-warn { background: var(--warning-bg); color: var(--warning-text); }
+  .stat-button.active { border-color: #333; transform: scale(1.05); }
+
+  .table-container { overflow-x: auto; margin-top: 15px; }
+  table { width: 100%; border-collapse: collapse; background: white; }
+  th { background-color: var(--primary-color); color: white; padding: 14px; font-size: 11px; text-align: left; text-transform: uppercase; }
+  td { padding: 12px; font-size: 12px; border-bottom: 1px solid #f1f1f1; }
+
+  .ok { background-color: var(--success-bg) !important; }
+  .bad { background-color: var(--danger-bg) !important; }
+  .warn { background-color: var(--warning-bg) !important; }
+
+  .pagination { margin-top: 20px; display: flex; justify-content: center; align-items: center; gap: 15px; }
+  .page-btn { padding: 8px 16px; background: #fff; border: 1px solid var(--primary-color); color: var(--primary-color); border-radius: 5px; cursor: pointer; font-weight: bold; }
+  .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <div class="header">
+    <div class="logo-container">
+      <svg width="45" height="45" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="48" fill="#f0f7ff" stroke="#0056b3" stroke-width="2"/>
+        <rect x="35" y="25" width="30" height="40" rx="2" fill="#0056b3" fill-opacity="0.8"/>
+        <rect x="25" y="35" width="40" height="30" rx="2" fill="#28a745" fill-opacity="0.8"/>
+        <path d="M47 43H53V47H57V53H53V57H47V53H43V47H47V43Z" fill="white"/>
+      </svg>
+      <div>
+        <h1 style="margin: 0; color: #0056b3; font-size: 26px;">Audit<span style="color: #28a745;">Med</span></h1>
+        <div style="font-size: 10px; text-transform: uppercase; color: #666; font-weight: bold;">Auditoría de Tarifarios Médicos - Res. 2706 de 2025</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="file-section">
+      <div class="file-box">
+        <span class="card-title">📁 Base Resolución 2706 (CUP)</span>
+        <input type="file" id="resolucion" accept=".xlsx, .xls">
+      </div>
+      <div class="separator"></div>
+      <div class="file-box">
+        <span class="card-title">📄 Tarifario Contrato</span>
+        <input type="file" id="contrato" accept=".xlsx, .xls">
+      </div>
+    </div>
+    <div class="actions">
+      <button class="main-btn btn-primary" onclick="comparar()">🔍 Iniciar Análisis</button>
+      <button class="main-btn btn-success" onclick="descargarExcelFiltrado()">📊 Exportar Excel</button>
+      <button class="main-btn btn-word" onclick="descargarWordEPS()">📄 Descargar Comunicado EPS</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap;">
+      <div style="display: flex; align-items: center;">
+        <span style="font-size: 0.85rem; font-weight: bold;">Filtros:</span>
+        <div id="stats-container" class="stats-bar" style="display:none;">
+          <button class="stat-button stat-total active" onclick="filtrar('TODOS', this)">Total: <span id="s-total">0</span></button>
+          <button class="stat-button stat-igual" onclick="filtrar('IGUAL', this)">Vigentes: <span id="s-igual">0</span></button>
+          <button class="stat-button stat-dif" onclick="filtrar('DIFERENTE', this)">Diferentes: <span id="s-dif">0</span></button>
+          <button class="stat-button stat-warn" onclick="filtrar('NO EXISTE', this)">No reconocidos: <span id="s-warn">0</span></button>
+        </div>
+      </div>
+      <select id="pageSize" onchange="resetPaginaYRender()" style="padding: 4px; border-radius: 4px;">
+        <option value="10">10 registros</option>
+        <option value="25">25 registros</option>
+        <option value="50">50 registros</option>
+        <option value="100">100 registros</option>
+      </select>
+    </div>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>CUP CONTRATO</th>
+            <th>CUP RESOLUCIÓN</th>
+            <th>DESCRIPCIÓN RESOLUCIÓN</th>
+            <th>NOMBRE CONTRATO</th>
+            <th>VALOR</th>
+            <th>RESULTADO</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="6" style="text-align:center; padding: 40px; color: #999;">Pendiente de análisis...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination" id="pag-container" style="display: none;">
+      <button class="page-btn" onclick="cambiarPagina(-1)" id="btnPrev">Anterior</button>
+      <span class="page-num">Página <span id="pageNum">1</span></span>
+      <button class="page-btn" onclick="cambiarPagina(1)" id="btnNext">Siguiente</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let dataOriginal = [];
+let dataFiltrada = [];
+let currentPage = 1;
+let stats = { total: 0, iguales: 0, diferentes: 0, noExisten: 0 };
+let nombreEntidad = "Entidad Nueva EPS";
+
+// Detectar nombre del archivo de contrato
+document.getElementById('contrato').addEventListener('change', function(e) {
+  if (e.target.files.length > 0) {
+    let fileName = e.target.files[0].name;
+    nombreEntidad = fileName.split('.')[0].replace(/Tarifario|Contrato|Auditoria|Reporte|_|-/gi, ' ').trim();
+  }
+});
+
+function normalizar(t) { return t ? t.toString().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[.,;:(){}\[\]\/\-]/g, "").replace(/\s+/g, " ").trim() : ""; }
+
+function leerExcel(file, callback) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const wb = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
+    callback(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]));
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function comparar() {
+  const resF = document.getElementById("resolucion").files[0];
+  const conF = document.getElementById("contrato").files[0];
+  if (!resF || !conF) return alert("Por favor cargue ambos archivos.");
+
+  leerExcel(resF, resolucion => {
+    leerExcel(conF, contrato => {
+      const mapRes = {};
+      resolucion.forEach(r => mapRes[r["CODIGO CUP"]] = r);
+
+      dataOriginal = contrato.map(c => {
+        const res = mapRes[c["CODIGO CUP"]];
+        let resultado = "NO EXISTE EN RESOLUCIÓN", clase = "warn", hexColor = "FFF3CD", dr = "CÓDIGO NO IDENTIFICADO", cr = "-";
+        
+        if (res) {
+          cr = res["CODIGO CUP"];
+          dr = res["DESCRIPCION"] || "";
+          if (normalizar(dr) === normalizar(c["NOMBRE SERVICIO"] || "")) {
+            resultado = "IGUAL"; clase = "ok"; hexColor = "D4EDDA";
+          } else {
+            resultado = "DIFERENTE"; clase = "bad"; hexColor = "F8D7DA";
+          }
+        }
+        return { 
+          cupC: c["CODIGO CUP"] || "N/A", 
+          cupR: cr,
+          dr, 
+          nc: c["NOMBRE SERVICIO"] || "", 
+          v: c["VALOR EN PESOS"] || "0", 
+          res: resultado, 
+          clase, hexColor 
+        };
+      });
+
+      dataFiltrada = [...dataOriginal];
+      actualizarStats();
+      resetPaginaYRender();
+      document.getElementById("stats-container").style.display = "flex";
+      document.getElementById("pag-container").style.display = "flex";
+    });
+  });
+}
+
+function actualizarStats() {
+  stats.total = dataOriginal.length;
+  stats.iguales = dataOriginal.filter(i => i.res === "IGUAL").length;
+  stats.diferentes = dataOriginal.filter(i => i.res === "DIFERENTE").length;
+  stats.noExisten = dataOriginal.filter(i => i.res === "NO EXISTE EN RESOLUCIÓN").length;
+  document.getElementById("s-total").innerText = stats.total;
+  document.getElementById("s-igual").innerText = stats.iguales;
+  document.getElementById("s-dif").innerText = stats.diferentes;
+  document.getElementById("s-warn").innerText = stats.noExisten;
+}
+
+function filtrar(t, btn) {
+  document.querySelectorAll('.stat-button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (t === 'TODOS') dataFiltrada = [...dataOriginal];
+  else if (t === 'NO EXISTE') dataFiltrada = dataOriginal.filter(i => i.res === "NO EXISTE EN RESOLUCIÓN");
+  else dataFiltrada = dataOriginal.filter(i => i.res === t);
+  resetPaginaYRender();
+}
+
+function resetPaginaYRender() { currentPage = 1; renderTabla(); }
+function cambiarPagina(dir) { currentPage += dir; renderTabla(); }
+
+function renderTabla() {
+  const tbody = document.getElementById("tbody"); tbody.innerHTML = "";
+  const size = parseInt(document.getElementById("pageSize").value);
+  const start = (currentPage - 1) * size;
+  dataFiltrada.slice(start, start + size).forEach(r => {
+    const tr = document.createElement("tr"); tr.className = r.clase;
+    tr.innerHTML = `
+      <td><b>${r.cupC}</b></td>
+      <td>${r.cupR}</td>
+      <td>${r.dr}</td>
+      <td>${r.nc}</td>
+      <td>$${Number(r.v).toLocaleString()}</td>
+      <td><b>${r.res}</b></td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById("pageNum").innerText = currentPage;
+  document.getElementById("btnPrev").disabled = (currentPage === 1);
+  document.getElementById("btnNext").disabled = (start + size >= dataFiltrada.length);
+}
+
+async function descargarExcelFiltrado() {
+  if(dataFiltrada.length === 0) return alert("Sin datos");
+  const workbook = new ExcelJS.Workbook();
+  const ws = workbook.addWorksheet('Reporte Auditoría');
+  ws.addRow(["CUP CONTRATO", "CUP RESOLUCIÓN", "DESC RESOLUCIÓN", "NOM CONTRATO", "VALOR", "ESTADO"]);
+  dataFiltrada.forEach(i => {
+    const row = ws.addRow([i.cupC, i.cupR, i.dr, i.nc, i.v, i.res]);
+    row.eachCell(c => { c.fill = {type:'pattern', pattern:'solid', fgColor:{argb:i.hexColor}}; });
+  });
+  const buf = await workbook.xlsx.writeBuffer();
+  saveAs(new Blob([buf]), `Auditoria_${nombreEntidad}.xlsx`);
+}
+
+async function descargarWordEPS() {
+  if (dataOriginal.length === 0) return alert("Debe realizar el análisis primero.");
+  const { Document, Packer, Paragraph, TextRun, AlignmentType, Table, TableRow, TableCell, WidthType } = window.docx;
+
+  // Lógica de tabla dinámica para Word (No mostrar ceros)
+  let tableRows = [
+    new TableRow({
+      children: [
+        new TableCell({ children: [new Paragraph({ text: "HALLAZGO TÉCNICO", bold: true })] }),
+        new TableCell({ children: [new Paragraph({ text: "CANTIDAD", bold: true })] }),
+        new TableCell({ children: [new Paragraph({ text: "ACCIÓN REQUERIDA", bold: true })] }),
+      ]
+    }),
+    new TableRow({
+      children: [
+        new TableCell({ children: [new Paragraph("CUPS vigentes")] }),
+        new TableCell({ children: [new Paragraph(`${stats.iguales}`)] }),
+        new TableCell({ children: [new Paragraph("Mantener en sistema")] }),
+      ]
+    })
+  ];
+
+  if(stats.diferentes > 0) {
+    tableRows.push(new TableRow({
+      children: [
+        new TableCell({ children: [new Paragraph("CUPS con diferencia en denominación")] }),
+        new TableCell({ children: [new Paragraph(`${stats.diferentes}`)] }),
+        new TableCell({ children: [new Paragraph("Ajustar nomenclatura")] }),
+      ]
+    }));
+  }
+
+  if(stats.noExisten > 0) {
+    tableRows.push(new TableRow({
+      children: [
+        new TableCell({ children: [new Paragraph("CUPS no reconocidos en la Resolución")] }),
+        new TableCell({ children: [new Paragraph(`${stats.noExisten}`)] }),
+        new TableCell({ children: [new Paragraph("Cambio / parametrización")] }),
+      ]
+    }));
+  }
+
+  // Cuerpo del Comunicado
+  let sections = [
+    new Paragraph({ children: [new TextRun({ text: "Sincelejo, 5 de Enero de 2026.", bold: true })], spacing: { after: 200 } }),
+    new Paragraph({ children: [new TextRun({ text: `Asunto: Informe de Auditoria interna de los cups contratados con la Entidad ${nombreEntidad} y la resolución 2706 2025 de Diciembre de 2025 Por la cual se establece la Clasificación Única de Procedimientos en Salud – CUPS.`, bold: true })], spacing: { after: 300 } }),
+    new Paragraph({ children: [new TextRun({ text: "Resultado de la Auditoria:", bold: true })], spacing: { after: 150 } }),
+    new Paragraph({ text: "El Departamento de Auditoría remite el informe correspondiente al análisis técnico realizado entre el Contrato vigente y la Resolución 2706 de 2025, cuyo objetivo fue verificar la correspondencia y alineación de los códigos CUPS frente a la normativa aplicable.", spacing: { after: 200 }, alignment: AlignmentType.JUSTIFY }),
+    new Paragraph({ text: "Del cruce de información efectuado se obtuvo los siguientes resultados:", spacing: { after: 250 } }),
+    new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: tableRows }),
+    new Paragraph({ text: "", spacing: { before: 300 } }),
+    new Paragraph({ children: [new TextRun({ text: "Observaciones y requerimientos:", bold: true })], spacing: { after: 150 } })
+  ];
+
+  if(stats.noExisten > 0) {
+    sections.push(new Paragraph({ children: [new TextRun({ text: "Ajuste de códigos no reconocidos:", bold: true })] }));
+    sections.push(new Paragraph({ text: `Se identificaron ${stats.noExisten} códigos CUPS del contrato que no presentan correspondencia con la Resolución 2706 de 2025. Se requiere realizar su cambio, actualización o parametrización, garantizando alineación con la normativa vigente.`, spacing: { after: 150 }, alignment: AlignmentType.JUSTIFY }));
+  }
+
+  if(stats.diferentes > 0) {
+    sections.push(new Paragraph({ children: [new TextRun({ text: "Homologación de denominaciones:", bold: true })] }));
+    sections.push(new Paragraph({ text: `Para ${stats.diferentes} registros con diferencias en la descripción del servicio, se solicita ajustar la nomenclatura del contrato para que coincida exactamente con la definida en la resolución.`, spacing: { after: 300 }, alignment: AlignmentType.JUSTIFY }));
+  }
+
+  sections.push(new Paragraph({ text: "Se anexa el soporte técnico detallado del análisis realizado para su validación y gestión interna.", spacing: { after: 400 } }));
+  sections.push(new Paragraph({ text: "Atentamente,", spacing: { after: 400 } }));
+  sections.push(new Paragraph({ children: [new TextRun({ text: "Departamento de Auditoría", bold: true })] }));
+
+  const doc = new Document({ sections: [{ children: sections }] });
+  Packer.toBlob(doc).then(blob => saveAs(blob, `Comunicado_${nombreEntidad}_Auditoria.docx`));
+}
+</script>
+</body>
+</html>
