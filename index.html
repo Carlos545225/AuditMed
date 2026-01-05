@@ -84,6 +84,7 @@
     border: 2px dashed #b1d4e5;
     border-radius: 8px;
     cursor: pointer;
+    box-sizing: border-box;
   }
 
   input[type="file"]::file-selector-button {
@@ -166,7 +167,7 @@
       </svg>
       <div>
         <h1 style="margin: 0; color: #0056b3; font-size: 26px;">Audit<span style="color: #28a745;">Med</span></h1>
-        <div style="font-size: 10px; text-transform: uppercase; color: #666; font-weight: bold;">Auditoría de Tarifarios Médicos - Res. 2706 de 2025</div>
+        <div style="font-size: 10px; text-transform: uppercase; color: #666; font-weight: bold;">Auditoría Técnica - Resolución 2706 de 2025</div>
       </div>
     </div>
   </div>
@@ -350,21 +351,49 @@ function renderTabla() {
 async function descargarExcelFiltrado() {
   if(dataFiltrada.length === 0) return alert("Sin datos");
   const workbook = new ExcelJS.Workbook();
-  const ws = workbook.addWorksheet('Reporte Auditoría');
-  ws.addRow(["CUP CONTRATO", "CUP RESOLUCIÓN", "DESC RESOLUCIÓN", "NOM CONTRATO", "VALOR", "ESTADO"]);
-  dataFiltrada.forEach(i => {
-    const row = ws.addRow([i.cupC, i.cupR, i.dr, i.nc, i.v, i.res]);
-    row.eachCell(c => { c.fill = {type:'pattern', pattern:'solid', fgColor:{argb:i.hexColor}}; });
+  const ws = workbook.addWorksheet('Auditoría Detallada');
+
+  ws.columns = [
+    { header: 'CUP CONTRATO', key: 'cupC', width: 15 },
+    { header: 'CUP RESOLUCIÓN', key: 'cupR', width: 15 },
+    { header: 'DESC. RESOLUCIÓN', key: 'dr', width: 45 },
+    { header: 'NOMBRE CONTRATO', key: 'nc', width: 45 },
+    { header: 'VALOR', key: 'v', width: 15 },
+    { header: 'ESTADO RESULTADO', key: 'res', width: 25 }
+  ];
+
+  const headerRow = ws.getRow(1);
+  headerRow.eachCell((cell) => {
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '0056B3' } };
+    cell.font = { color: { argb: 'FFFFFF' }, bold: true, size: 12 };
+    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
   });
+
+  dataFiltrada.forEach(i => {
+    const row = ws.addRow({
+      cupC: i.cupC,
+      cupR: i.cupR,
+      dr: i.dr,
+      nc: i.nc,
+      v: i.v,
+      res: i.res
+    });
+    row.eachCell(c => { 
+      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: i.hexColor } }; 
+      c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+      c.alignment = { vertical: 'middle' };
+    });
+  });
+
   const buf = await workbook.xlsx.writeBuffer();
-  saveAs(new Blob([buf]), `Auditoria_${nombreEntidad}.xlsx`);
+  saveAs(new Blob([buf]), `Auditoria_${nombreEntidad}_Res2706.xlsx`);
 }
 
 async function descargarWordEPS() {
   if (dataOriginal.length === 0) return alert("Debe realizar el análisis primero.");
   const { Document, Packer, Paragraph, TextRun, AlignmentType, Table, TableRow, TableCell, WidthType } = window.docx;
 
-  // Lógica de tabla dinámica para Word (No mostrar ceros)
   let tableRows = [
     new TableRow({
       children: [
@@ -383,28 +412,27 @@ async function descargarWordEPS() {
   ];
 
   if(stats.diferentes > 0) {
-    tableRows.push(new TableRow({
-      children: [
+    tableRows.push(new TableRow({ children: [
         new TableCell({ children: [new Paragraph("CUPS con diferencia en denominación")] }),
         new TableCell({ children: [new Paragraph(`${stats.diferentes}`)] }),
         new TableCell({ children: [new Paragraph("Ajustar nomenclatura")] }),
-      ]
-    }));
+    ]}));
   }
 
   if(stats.noExisten > 0) {
-    tableRows.push(new TableRow({
-      children: [
+    tableRows.push(new TableRow({ children: [
         new TableCell({ children: [new Paragraph("CUPS no reconocidos en la Resolución")] }),
         new TableCell({ children: [new Paragraph(`${stats.noExisten}`)] }),
         new TableCell({ children: [new Paragraph("Cambio / parametrización")] }),
-      ]
-    }));
+    ]}));
   }
 
-  // Cuerpo del Comunicado
   let sections = [
-    new Paragraph({ children: [new TextRun({ text: "Sincelejo, 5 de Enero de 2026.", bold: true })], spacing: { after: 200 } }),
+    // FECHA EN NEGRILLA SEGÚN SOLICITUD
+    new Paragraph({ 
+      children: [new TextRun({ text: "Sincelejo, 5 de Enero de 2026.", bold: true })], 
+      spacing: { after: 200 } 
+    }),
     new Paragraph({ children: [new TextRun({ text: `Asunto: Informe de Auditoria interna de los cups contratados con la Entidad ${nombreEntidad} y la resolución 2706 2025 de Diciembre de 2025 Por la cual se establece la Clasificación Única de Procedimientos en Salud – CUPS.`, bold: true })], spacing: { after: 300 } }),
     new Paragraph({ children: [new TextRun({ text: "Resultado de la Auditoria:", bold: true })], spacing: { after: 150 } }),
     new Paragraph({ text: "El Departamento de Auditoría remite el informe correspondiente al análisis técnico realizado entre el Contrato vigente y la Resolución 2706 de 2025, cuyo objetivo fue verificar la correspondencia y alineación de los códigos CUPS frente a la normativa aplicable.", spacing: { after: 200 }, alignment: AlignmentType.JUSTIFY }),
@@ -429,7 +457,7 @@ async function descargarWordEPS() {
   sections.push(new Paragraph({ children: [new TextRun({ text: "Departamento de Auditoría", bold: true })] }));
 
   const doc = new Document({ sections: [{ children: sections }] });
-  Packer.toBlob(doc).then(blob => saveAs(blob, `Comunicado_${nombreEntidad}_Auditoria.docx`));
+  Packer.toBlob(doc).then(blob => saveAs(blob, `Comunicado_${nombreEntidad}.docx`));
 }
 </script>
 </body>
